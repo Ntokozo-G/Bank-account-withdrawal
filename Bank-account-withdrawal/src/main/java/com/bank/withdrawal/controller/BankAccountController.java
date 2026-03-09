@@ -1,55 +1,52 @@
 package com.bank.withdrawal.controller;
 
-import com.bank.withdrawal.event.WithdrawalEvent;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sns.SnsClient;
-import software.amazon.awssdk.services.sns.model.PublishRequest;
-import software.amazon.awssdk.services.sns.model.PublishResponse;
-import java.math.BigDecimal;
+import com.bank.withdrawal.dto.WithdrawalRequest;
+import com.bank.withdrawal.dto.WithdrawalResponse;
+import com.bank.withdrawal.service.WithdrawalService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+
+ // this is the HTTP entry point for the withdrawal process.
+ // the responsibility is to receive the request then delegate to the service(WithdrawalService) and then return the response.
+ //Nothing else — no business logic, no SQL, no AWS, this follows the SOLID principle of single responsibility
+ //All error responses are handled by GlobalExceptionHandler,
+ //so this class stays at just a few lines.
+
 @RestController
 @RequestMapping("/bank")
+@Validated  // Enables constraint validation on method parameters
 public class BankAccountController {
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-    private SnsClient snsClient;
-    public BankAccountController() {
-        this.snsClient = SnsClient.builder()
-                .region(Region.YOUR_REGION) // Specify your region
-                .build();
 
+    private final WithdrawalService withdrawalService;
+
+    // @Autowired is not needed since Spring auto-wires single-constructor beans
+    public BankAccountController(WithdrawalService withdrawalService) {
+        this.withdrawalService = withdrawalService;
     }
-    @PostMapping("/withdraw")
-    public String withdraw(@RequestParam("accountId") Long accountId, @RequestParam("amount") BigDecimal amount) {
-// Check current balance
-        String sql = "SELECT balance FROM accounts WHERE id = ?";
-        BigDecimal currentBalance = jdbcTemplate.queryForObject(sql, new Object[]{accountId}, BigDecimal.class);
-        if (currentBalance != null && currentBalance.compareTo(amount) >= 0) {
-// Update balance
-            sql = "UPDATE accounts SET balance = balance - ? WHERE id = ?";
-            int rowsAffected = jdbcTemplate.update(sql, amount, accountId);
-            if (rowsAffected > 0) {
-                return "Withdrawal successful";
-            } else {
-// In case the update fails for reasons other than a balance check
-                return "Withdrawal failed";
-            }
-        } else {
-// Insufficient funds
-            return "Insufficient funds for withdrawal";
-        }
-// After a successful withdrawal, publish a withdrawal event to SNS
-        WithdrawalEvent event = new WithdrawalEvent(amount, accountId, "SUCCESSFUL");
-        String eventJson = event.toJson(); // Convert event to JSON
-        String snsTopicArn = "arn:aws:sns:YOUR_REGION:YOUR_ACCOUNT_ID:YOUR_TOPIC_NAME";
-        PublishRequest publishRequest = PublishRequest.builder()
-                .message(eventJson)
-                .topicArn(snsTopicArn)
-                .build();
 
-        PublishResponse publishResponse = snsClient.publish(publishRequest);
-        return "Withdrawal successful";
+    // POST /bank/withdraw
+    // Request body (JSON):
+    //{
+    // "accountId": 1,
+    // "amount": "150.00",
+    // "correlationId": "optional-trace-id"
+    //}
+    // @Valid triggers validation of @NotNull and @Positive on WithdrawalRequest
+    //before this method body runs. Invalid requests return 400 automatically.
+
+
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<WithdrawalResponse> withdraw(
+            @RequestBody @Valid WithdrawalRequest request) {
+
+        WithdrawalResponse response = withdrawalService.withdraw(request);
+        return ResponseEntity.ok(response);
     }
 }

@@ -9,7 +9,7 @@ import software.amazon.awssdk.services.sns.SnsClient;
 
 
  //Creates the SnsClient bean, this will only be active when running with --spring.profiles.active=aw, AWS credentials are needed
- //on the default local profile this com.bank.withdrawal.config class is skipped entirely,
+ //on the default local profile this config class is skipped entirely,
  //and LocalEventPublisher is used instead since i have no AWS credentials
 
 @Configuration

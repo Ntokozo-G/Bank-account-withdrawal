@@ -23,7 +23,7 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Web (REST com.bank.withdrawal.controller, Jackson JSON) -->
+        <!-- Spring Boot Web (REST controller, Jackson JSON) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
