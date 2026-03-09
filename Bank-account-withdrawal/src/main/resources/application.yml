@@ -1,0 +1,54 @@
+
+# Default profile,  runs locally with H2 in-memory DB plus console-logging only
+# To use real AWS SNS, run with: --spring.profiles.active=aws
+
+spring:
+  application:
+    name: bank-withdrawal
+
+  # H2 in-memory database , this DB is auto-created on startup, no installation needed, lol,no password i always forget them, anyway this is for testing purposes locally
+  datasource:
+    url: jdbc:h2:mem:bankdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sanlamFinTech
+    password:
+
+  # Tell Spring to run schema.sql and data.sql on startup
+  sql:
+    init:
+      mode: always
+
+  # H2 browser console — visit http://localhost:8080/h2-console
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Our custom configuration (WithdrawalProperties)
+# Placeholder values used locally, these values will  be overridden in aws profile below
+bank:
+  withdrawal:
+    aws-region: eu-west-1
+    sns-topic-arn: arn:aws:sns:eu-west-1:000000000000:withdrawal-events
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.bank: DEBUG
+
+---
+
+# AWS profile this uses real SnsClient.  Run with: --spring.profiles.active=aws
+# Set your real values here or via environment variables before running.
+
+spring:
+  config:
+    activate:
+      on-profile: aws
+
+bank:
+  withdrawal:
+    aws-region: eu-west-1 #we can change this to point into a real region
+    sns-topic-arn: arn:aws:sns:eu-west-1:123456789012:withdrawal-events  # same as this one , these are just made up values
